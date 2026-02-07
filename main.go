@@ -36,9 +36,12 @@ type suggestionsPayload struct {
 }
 
 func main() {
+	defaultEndpoint := envOr("OLLAMA_ENDPOINT", "http://localhost:11434")
+	defaultModel := envOr("OLLAMA_MODEL", "llama3.1")
+
 	var (
-		endpoint = flag.String("endpoint", "http://localhost:11434", "Ollama endpoint")
-		model    = flag.String("model", "llama3.1", "Ollama model")
+		endpoint = flag.String("endpoint", defaultEndpoint, "Ollama endpoint (or OLLAMA_ENDPOINT)")
+		model    = flag.String("model", defaultModel, "Ollama model (or OLLAMA_MODEL)")
 		count    = flag.Int("n", 3, "number of suggestions (1-3)")
 		timeout  = flag.Duration("timeout", 30*time.Second, "HTTP timeout")
 	)
@@ -299,4 +302,11 @@ func gitCommit(message string) error {
 func fatal(err error) {
 	fmt.Fprintln(os.Stderr, "error:", err)
 	os.Exit(1)
+}
+
+func envOr(key, fallback string) string {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+		return v
+	}
+	return fallback
 }

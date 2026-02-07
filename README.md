@@ -35,8 +35,8 @@ gocommit
 
 ## Flags
 
-- `-endpoint` Ollama endpoint (default `http://localhost:11434`)
-- `-model` Ollama model (default `llama3.1`)
+- `-endpoint` Ollama endpoint (default `http://localhost:11434` or `OLLAMA_ENDPOINT`)
+- `-model` Ollama model (default `llama3.1` or `OLLAMA_MODEL`)
 - `-n` number of suggestions (1-3)
 - `-timeout` HTTP timeout (default 30s)
 
