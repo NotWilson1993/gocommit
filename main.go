@@ -157,7 +157,9 @@ func requestSuggestions(endpoint, model string, n int, diff, stat string, timeou
 	if err != nil {
 		return nil, fmt.Errorf("ollama request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode >= 400 {
 		b, _ := io.ReadAll(resp.Body)
