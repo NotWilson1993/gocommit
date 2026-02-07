@@ -62,8 +62,12 @@ func main() {
 	if strings.TrimSpace(diff) == "" {
 		fatal(errors.New("no staged changes (git diff --staged is empty)"))
 	}
+	stat, err := stagedDiffStat()
+	if err != nil {
+		fatal(err)
+	}
 
-	msgs, err := requestSuggestions(*endpoint, *model, *count, diff, *timeout)
+	msgs, err := requestSuggestions(*endpoint, *model, *count, diff, stat, *timeout)
 	if err != nil {
 		fatal(err)
 	}
@@ -104,8 +108,19 @@ func stagedDiff() (string, error) {
 	return out.String(), nil
 }
 
-func requestSuggestions(endpoint, model string, n int, diff string, timeout time.Duration) ([]string, error) {
-	prompt := buildPrompt(n, diff)
+func stagedDiffStat() (string, error) {
+	cmd := exec.Command("git", "diff", "--staged", "--stat")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("git diff --staged --stat failed: %w", err)
+	}
+	return out.String(), nil
+}
+
+func requestSuggestions(endpoint, model string, n int, diff, stat string, timeout time.Duration) ([]string, error) {
+	prompt := buildPrompt(diff, stat)
 
 	reqBody := ollamaChatRequest{
 		Model: model,
@@ -118,8 +133,8 @@ func requestSuggestions(endpoint, model string, n int, diff string, timeout time
 			"type": "object",
 			"properties": map[string]any{
 				"messages": map[string]any{
-					"type": "array",
-					"items": map[string]any{"type": "string"},
+					"type":     "array",
+					"items":    map[string]any{"type": "string"},
 					"minItems": 1,
 					"maxItems": n,
 				},
@@ -162,12 +177,14 @@ func requestSuggestions(endpoint, model string, n int, diff string, timeout time
 	return msgs, nil
 }
 
-func buildPrompt(n int, diff string) string {
+func buildPrompt(diff, stat string) string {
 	return fmt.Sprintf(
-		"Generate %d concise git commit message suggestions based on the staged diff below. "+
-			"Use imperative present tense. Return ONLY JSON with shape {\"messages\": [\"...\"]}.\n\n"+
-			"Diff:\n%s",
-		n,
+		"You MUST only describe the staged diff. Do NOT invent changes. "+
+			"Use imperative present tense. One line per suggestion. "+
+			"If changes are only comments/whitespace/formatting, say so explicitly. "+
+			"Return ONLY JSON with shape {\"messages\": [\"...\"]}.\n\n"+
+			"Staged diff stat:\n%s\n\nStaged diff:\n%s",
+		stat,
 		diff,
 	)
 }
